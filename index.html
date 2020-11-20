@@ -1,4 +1,5 @@
-<script type="text/javascript" src="http://livejs.com/live.js"></script>
+<!-- Uncomment for live reload -->
+<!-- <script type="text/javascript" src="http://livejs.com/live.js"></script> -->
 
 <!-- Constants -->
 <script>
@@ -39,11 +40,18 @@
 
 <!-- Helpers -->
 <script>
-  function createContactNode ({ name, to, subject, body, formatter }) {
+  function createContactNode ({ name, to, subject, body, valid, formatter }) {
     var template = document.getElementById("contact-template");
     var contactNode = template.content.cloneNode(true);
-    contactNode.querySelector(".name").textContent = name;
-    contactNode.querySelector(".email").href = formatter({ to, subject, body });
+    contactNode.querySelector(".name").textContent = name + ": ";
+    contactNode.querySelector(".email").textContent = to;
+    contactNode.querySelector(".send").href = formatter({ to, subject, body });
+    if (valid) {
+      contactNode.querySelector(".error").remove();
+    } else {
+      contactNode.querySelector(".send").remove();
+      contactNode.querySelector(".error").textContent = "[invalid format]";
+    }
     return contactNode;
   }
 </script>
@@ -64,7 +72,7 @@
       var valid = VALID_EMAIL.test(input);
       var email = valid ? input.match(VALID_EMAIL)[0] : null;
       var name = input.replace(VALID_EMAIL, "").replace(/<.*>/g, "").trim();
-      return { valid, name, email, input };
+      return { valid, name: name || email, email, input };
     });
 
     STATE.contacts = contacts;
@@ -76,7 +84,7 @@
     list.innerHTML = "";
 
     STATE.contacts.forEach((contact) => {
-      var { name, email } = contact;
+      var { name, email, valid } = contact;
       var contactNode = createContactNode({
         name,
         to: email,
@@ -85,6 +93,7 @@
           Array(100).fill().map(() => ".").join("%0A") +
           `%0A %0A ${name} <${email}> %0A %0A `+
           "Merry Christmas, ya filthy animal 🌲 ",
+        valid,
         formatter: STATE.format
       });
       list.appendChild(contactNode);
@@ -97,9 +106,9 @@
     renderContactList();
   }
 
-  function handleListChange ({ target }) {
-    console.log(target)
-    updateContacts(target.value);
+  function handleListChange () {
+    var emailInput = document.getElementById("emails");
+    updateContacts(emailInput.value);
     renderContactList();
   }
 
@@ -107,61 +116,100 @@
   document.addEventListener("DOMContentLoaded", function() {
     var sendByForm = document.getElementById("sendBy");
     sendByForm.addEventListener("change", handleSendByChange);
-
-    var emailInput = document.getElementById("emails");
-    emailInput.addEventListener("change", handleListChange);
   });
 </script>
 
 <style>
   body {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
     text-align: center;
   }
 
+  button, label { cursor: pointer }
+
   textarea {
+    border-radius: 4px;
     height: 10em;
+    padding: 1em;
     width: 30rem;
   }
 
-  ul {
+  textarea:focus {
+    border: 1px dashed forestgreen;
+    outline: none;
+  }
+
+  ul:not(:empty) {
+    border: 1px dashed salmon;
+    padding: 1em 2em;
+    border-radius: 4px;
+    box-sizing: border-box;
     text-align: left;
     margin: 0 auto;
     width: 30rem;
   }
+
+  address { display: flex; justify-content: space-between; }
+
+  .name { font-weight: bold; font-style: normal; }
+  li span:last-child { align-self: flex-end;}
+
+  .error { color: firebrick }
 </style>
 
-<h1>Secret Santa</h1>
+<h1>Simple Secret Santa</h1>
+<br>
+<br>
 
 <label for="sendBy">
   How do you send email?
 </label>
 <br>
-<br>
 <form id="sendBy">
-  <input type="radio" name="sendBy" id="gmail" value="gmail" checked>
-  <label for="gmail">Gmail</label>
+  <label for="gmail">
+    <input type="radio" name="sendBy" id="gmail" value="gmail" checked>
+    Gmail
+  </label>
 
-  <input type="radio" name="sendBy" id="desktop" value="desktop">
-  <label for="desktop">Desktop Mail</label>
+  <label for="desktop">
+    <input type="radio" name="sendBy" id="desktop" value="desktop">
+    Desktop Mail
+  </label>
 
-  <input type="radio" name="sendBy" id="yahoo" value="yahoo">
-  <label for="yahoo">Yahoo</label>
+  <label for="yahoo">
+    <input type="radio" name="sendBy" id="yahoo" value="yahoo">
+    Yahoo
+  </label>
 
-  <input type="radio" name="sendBy" id="outlook" value="outlook">
-  <label for="outlook">Outlook</label>
+  <label for="outlook">
+    <input type="radio" name="sendBy" id="outlook" value="outlook">
+    Outlook
+  </label>
 
-  <input type="radio" name="sendBy" id="aol" value="aol">
-  <label for="aol">Aol</label>
+  <label for="aol">
+    <input type="radio" name="sendBy" id="aol" value="aol">
+    Aol
+  </label>
 </form>
+<br>
+<br>
 <br>
 
 
 <label for="emails">
   Who would you like to include?
+  <br>
 </label>
 <br>
+<textarea
+  id="emails"
+  placeholder="Please enter a comma-separated list, with each item formatted as: Name &lt;name@email.com&gt;"
+></textarea>
 <br>
-<textarea id="emails"></textarea>
+<button onclick="handleListChange()">Generate Assignments</button>
+<br>
 <br>
 <br>
 
@@ -171,8 +219,12 @@
 <template id="contact-template">
   <li>
     <address>
-      <span class="name"></span>
-      <a class="email" target="_blank">Send</a>
+      <span>
+        <span class="name"></span>
+        <span class="email"></span>
+      </span>
+      <a class="send" target="_blank">Send</a>
+      <span class="error"></span>
     </address>
   </li>
 </template>
