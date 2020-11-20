@@ -1,0 +1,178 @@
+<script type="text/javascript" src="http://livejs.com/live.js"></script>
+
+<!-- Constants -->
+<script>
+  const EMAIL_REGEX = /(.+)\s+<(.*?)>/;
+  const VALID_EMAIL = /[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*/;
+</script>
+
+<!-- Formatters -->
+<script>
+  function formatGmail ({ to, subject, body }) {
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+  }
+
+  function formatMailTo ({ to, subject, body }) {
+    return `mailto:${to}?subject=${subject}&body=${body}`;
+  }
+
+  function formatYahoo ({ to, subject, body }) {
+    return `http://compose.mail.yahoo.com/?to=${to}&subj=${subject}&body=${body}`;
+  }
+
+  function formatOutlook ({ to, subject, body }) {
+    return `https://outlook.live.com/owa/#subject=${subject}&body=${body}&to=${to}&path=%2fmail%2faction%2fcompose`;
+  }
+
+  function formatAOL ({ to, subject, body }) {
+    return `http://mail.aol.com/mail/compose-message.aspx?to=${to}&subject=${subject}&body=${body}`;
+  }
+
+  const formatters = {
+    gmail: formatGmail,
+    desktop: formatMailTo,
+    yahoo: formatYahoo,
+    outlook: formatOutlook,
+    aol: formatAOL,
+  }
+</script>
+
+<!-- Helpers -->
+<script>
+  function createContactNode ({ name, to, subject, body, formatter }) {
+    var template = document.getElementById("contact-template");
+    var contactNode = template.content.cloneNode(true);
+    contactNode.querySelector(".name").textContent = name;
+    contactNode.querySelector(".email").href = formatter({ to, subject, body });
+    return contactNode;
+  }
+</script>
+
+<!-- Application -->
+<script>
+  let STATE = {
+    format: formatters.gmail,
+    contacts: []
+  }
+
+  function updateFormatter (type = "gmail") {
+    STATE.format = formatters[type] || formatters.gmail;
+  }
+
+  function updateContacts (list = "") {
+    var contacts = list.split(",").map((input = "") => {
+      var valid = VALID_EMAIL.test(input);
+      var email = valid ? input.match(VALID_EMAIL)[0] : null;
+      var name = input.replace(VALID_EMAIL, "").replace(/<.*>/g, "").trim();
+      return { valid, name, email, input };
+    });
+
+    STATE.contacts = contacts;
+  };
+
+
+  function renderContactList () {
+    var list = document.getElementById("list");
+    list.innerHTML = "";
+
+    STATE.contacts.forEach((contact) => {
+      var { name, email } = contact;
+      var contactNode = createContactNode({
+        name,
+        to: email,
+        subject: "Secret Santa Assignment",
+        body: "You've been assigned: %0A" +
+          Array(100).fill().map(() => ".").join("%0A") +
+          `%0A %0A ${name} <${email}> %0A %0A `+
+          "Merry Christmas, ya filthy animal 🌲 ",
+        formatter: STATE.format
+      });
+      list.appendChild(contactNode);
+    });
+  }
+
+  function handleSendByChange ({ target }) {
+    console.log(target)
+    updateFormatter(target.value);
+    renderContactList();
+  }
+
+  function handleListChange ({ target }) {
+    console.log(target)
+    updateContacts(target.value);
+    renderContactList();
+  }
+
+
+  document.addEventListener("DOMContentLoaded", function() {
+    var sendByForm = document.getElementById("sendBy");
+    sendByForm.addEventListener("change", handleSendByChange);
+
+    var emailInput = document.getElementById("emails");
+    emailInput.addEventListener("change", handleListChange);
+  });
+</script>
+
+<style>
+  body {
+    text-align: center;
+  }
+
+  textarea {
+    height: 10em;
+    width: 30rem;
+  }
+
+  ul {
+    text-align: left;
+    margin: 0 auto;
+    width: 30rem;
+  }
+</style>
+
+<h1>Secret Santa</h1>
+
+<label for="sendBy">
+  How do you send email?
+</label>
+<br>
+<br>
+<form id="sendBy">
+  <input type="radio" name="sendBy" id="gmail" value="gmail" checked>
+  <label for="gmail">Gmail</label>
+
+  <input type="radio" name="sendBy" id="desktop" value="desktop">
+  <label for="desktop">Desktop Mail</label>
+
+  <input type="radio" name="sendBy" id="yahoo" value="yahoo">
+  <label for="yahoo">Yahoo</label>
+
+  <input type="radio" name="sendBy" id="outlook" value="outlook">
+  <label for="outlook">Outlook</label>
+
+  <input type="radio" name="sendBy" id="aol" value="aol">
+  <label for="aol">Aol</label>
+</form>
+<br>
+
+
+<label for="emails">
+  Who would you like to include?
+</label>
+<br>
+<br>
+<textarea id="emails"></textarea>
+<br>
+<br>
+
+<ul id="list"></ul>
+
+<!-- Contact List Template -->
+<template id="contact-template">
+  <li>
+    <address>
+      <span class="name"></span>
+      <a class="email" target="_blank">Send</a>
+    </address>
+  </li>
+</template>
