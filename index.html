@@ -1,5 +1,5 @@
 <!-- Uncomment for live reload -->
-<!-- <script type="text/javascript" src="http://livejs.com/live.js"></script> -->
+<script type="text/javascript" src="http://livejs.com/live.js"></script>
 
 <!-- Constants -->
 <script>
@@ -35,6 +35,12 @@
     yahoo: formatYahoo,
     outlook: formatOutlook,
     aol: formatAOL,
+  };
+
+  function generateMessage (contact) {
+    var spacer = "%0A" + Array(130).fill().map(() => ".").join("%0A") + "%0A %0A";
+    var holidayGreeting = " %0A %0A  🌲 Merry Christmas 🌲";
+    return `You've been assigned: ${spacer} ${contact} ${holidayGreeting}`;
   }
 </script>
 
@@ -43,7 +49,7 @@
   function createContactNode ({ name, to, subject, body, valid, formatter }) {
     var template = document.getElementById("contact-template");
     var contactNode = template.content.cloneNode(true);
-    contactNode.querySelector(".name").textContent = name + ": ";
+    contactNode.querySelector(".name").textContent = name;
     contactNode.querySelector(".email").textContent = to;
     contactNode.querySelector(".send").href = formatter({ to, subject, body });
     if (valid) {
@@ -53,6 +59,37 @@
       contactNode.querySelector(".error").textContent = "[invalid format]";
     }
     return contactNode;
+  }
+
+  function createPreviewNode (contacts = []) {
+    var template = document.getElementById("preview-template");
+    var assignmentsNode = template.content.cloneNode(true);
+    var listNode = assignmentsNode.getElementById("assignments-list");
+    contacts.forEach((contact) => {
+      var li = document.createElement("li");
+      li.textContent =
+        `${contact.name || contact.email} → ${contact.pair.name || contact.pair.email}`;
+      listNode.appendChild(li);
+    });
+
+    return assignmentsNode;
+  }
+
+  function shuffle (array) {
+    for(let i = array.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * i);
+      const temp = array[i];
+      array[i] = array[j];
+      array[j] = temp;
+    }
+    return array;
+  };
+
+  function generatePairs (contacts = []) {
+    return shuffle(contacts).map((contact, i) => {
+      let pair = i + 1 == contacts.length ? contacts[0] : contacts[i + 1];
+      return { ...contact, pair };
+    })
   }
 </script>
 
@@ -75,7 +112,9 @@
       return { valid, name: name || email, email, input };
     });
 
-    STATE.contacts = contacts;
+    var pairedContacts = generatePairs(contacts);
+
+    STATE.contacts = pairedContacts;
   };
 
 
@@ -84,24 +123,25 @@
     list.innerHTML = "";
 
     STATE.contacts.forEach((contact) => {
-      var { name, email, valid } = contact;
+      var { name, email, valid, pair } = contact;
       var contactNode = createContactNode({
         name,
         to: email,
         subject: "Secret Santa Assignment",
-        body: "You've been assigned: %0A" +
-          Array(100).fill().map(() => ".").join("%0A") +
-          `%0A %0A ${name} <${email}> %0A %0A `+
-          "Merry Christmas, ya filthy animal 🌲 ",
+        body: generateMessage(`${pair.name} <${pair.email}>`),
         valid,
         formatter: STATE.format
       });
       list.appendChild(contactNode);
     });
+
+    var preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    preview.appendChild(createPreviewNode(STATE.contacts));
   }
 
   function handleSendByChange ({ target }) {
-    console.log(target)
     updateFormatter(target.value);
     renderContactList();
   }
@@ -152,14 +192,18 @@
   }
 
   address { display: flex; justify-content: space-between; }
-
   .name { font-weight: bold; font-style: normal; }
-  li span:last-child { align-self: flex-end;}
+  .list li span:last-child { align-self: flex-end;}
+
+  .preview li {
+    display: flex;
+    justify-content: space-between;
+  }
 
   .error { color: firebrick }
 </style>
 
-<h1>Simple Secret Santa</h1>
+<h1>Super Simple Secret Santa</h1>
 <br>
 <br>
 
@@ -195,7 +239,6 @@
 </form>
 <br>
 <br>
-<br>
 
 
 <label for="emails">
@@ -214,13 +257,16 @@
 <br>
 
 <ul id="list"></ul>
+<br>
+<br>
+<div id="preview"></div>
 
 <!-- Contact List Template -->
 <template id="contact-template">
   <li>
     <address>
       <span>
-        <span class="name"></span>
+        <span class="name"></span>,
         <span class="email"></span>
       </span>
       <a class="send" target="_blank">Send</a>
@@ -228,3 +274,27 @@
     </address>
   </li>
 </template>
+
+<!-- Assignments Preview Template -->
+<template id="preview-template">
+  <details>
+    <summary>
+      Assignments [Spoiler Alert]
+    </summary>
+    <br>
+    <ul id="assignments-list">
+    </ul>
+  </details>
+</template>
+
+<!-- Assignment Template -->
+<template id="preview-template">
+  <li>
+  </li>
+</template>
+
+
+
+
+
+
