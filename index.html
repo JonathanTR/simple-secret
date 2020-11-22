@@ -1,297 +1,321 @@
-<!-- Uncomment for live reload -->
-<script type="text/javascript" src="http://livejs.com/live.js"></script>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Uncomment for live reload -->
+    <script type="text/javascript" src="http://livejs.com/live.js"></script>
 
-<!-- Constants -->
-<script>
-  const EMAIL_REGEX = /(.+)\s+<(.*?)>/;
-  const VALID_EMAIL = /[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*/;
-</script>
+    <!-- Constants -->
+    <script>
+      const EMAIL_REGEX = /(.+)\s+<(.*?)>/;
+      const VALID_EMAIL = /[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*/;
+    </script>
 
-<!-- Formatters -->
-<script>
-  function formatGmail ({ to, subject, body }) {
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
-  }
+    <!-- Formatters -->
+    <script>
+      function formatGmail ({ to, subject, body }) {
+        return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+      }
 
-  function formatMailTo ({ to, subject, body }) {
-    return `mailto:${to}?subject=${subject}&body=${body}`;
-  }
+      function formatMailTo ({ to, subject, body }) {
+        return `mailto:${to}?subject=${subject}&body=${body}`;
+      }
 
-  function formatYahoo ({ to, subject, body }) {
-    return `http://compose.mail.yahoo.com/?to=${to}&subj=${subject}&body=${body}`;
-  }
+      function formatYahoo ({ to, subject, body }) {
+        return `http://compose.mail.yahoo.com/?to=${to}&subj=${subject}&body=${body}`;
+      }
 
-  function formatOutlook ({ to, subject, body }) {
-    return `https://outlook.live.com/owa/#subject=${subject}&body=${body}&to=${to}&path=%2fmail%2faction%2fcompose`;
-  }
+      function formatOutlook ({ to, subject, body }) {
+        return `https://outlook.live.com/owa/#subject=${subject}&body=${body}&to=${to}&path=%2fmail%2faction%2fcompose`;
+      }
 
-  function formatAOL ({ to, subject, body }) {
-    return `http://mail.aol.com/mail/compose-message.aspx?to=${to}&subject=${subject}&body=${body}`;
-  }
+      function formatAOL ({ to, subject, body }) {
+        return `http://mail.aol.com/mail/compose-message.aspx?to=${to}&subject=${subject}&body=${body}`;
+      }
 
-  const formatters = {
-    gmail: formatGmail,
-    desktop: formatMailTo,
-    yahoo: formatYahoo,
-    outlook: formatOutlook,
-    aol: formatAOL,
-  };
+      const formatters = {
+        gmail: formatGmail,
+        desktop: formatMailTo,
+        yahoo: formatYahoo,
+        outlook: formatOutlook,
+        aol: formatAOL,
+      };
 
-  function generateMessage (contact) {
-    var spacer = "%0A" + Array(130).fill().map(() => ".").join("%0A") + "%0A %0A";
-    var holidayGreeting = " %0A %0A  🌲 Merry Christmas 🌲";
-    return `You've been assigned: ${spacer} ${contact} ${holidayGreeting}`;
-  }
-</script>
+      function generateMessage (contact) {
+        var spacer = "%0A" + Array(130).fill().map(() => ".").join("%0A") + "%0A %0A";
+        var holidayGreeting = " %0A %0A  🌲 Merry Christmas 🌲";
+        return `You've been assigned: ${spacer} ${contact} ${holidayGreeting}`;
+      }
+    </script>
 
-<!-- Helpers -->
-<script>
-  function createContactNode ({ name, to, subject, body, valid, formatter }) {
-    var template = document.getElementById("contact-template");
-    var contactNode = template.content.cloneNode(true);
-    contactNode.querySelector(".name").textContent = name;
-    contactNode.querySelector(".email").textContent = to;
-    contactNode.querySelector(".send").href = formatter({ to, subject, body });
-    if (valid) {
-      contactNode.querySelector(".error").remove();
-    } else {
-      contactNode.querySelector(".send").remove();
-      contactNode.querySelector(".error").textContent = "[invalid format]";
-    }
-    return contactNode;
-  }
+    <!-- Helpers -->
+    <script>
+      function createContactNode ({ name, to, subject, body, valid, formatter }) {
+        var template = document.getElementById("contact-template");
+        var contactNode = template.content.cloneNode(true);
+        contactNode.querySelector(".name").textContent = name;
+        contactNode.querySelector(".email").textContent = to;
+        contactNode.querySelector(".send").href = formatter({ to, subject, body });
+        if (valid) {
+          contactNode.querySelector(".error").remove();
+        } else {
+          contactNode.querySelector(".send").remove();
+          contactNode.querySelector(".error").textContent = "[invalid format]";
+        }
+        return contactNode;
+      }
 
-  function createPreviewNode (contacts = []) {
-    var template = document.getElementById("preview-template");
-    var assignmentsNode = template.content.cloneNode(true);
-    var listNode = assignmentsNode.getElementById("assignments-list");
-    contacts.forEach((contact) => {
-      var li = document.createElement("li");
-      li.textContent =
-        `${contact.name || contact.email} → ${contact.pair.name || contact.pair.email}`;
-      listNode.appendChild(li);
-    });
+      function createPreviewNode (contacts = []) {
+        var template = document.getElementById("preview-template");
+        var assignmentsNode = template.content.cloneNode(true);
+        var listNode = assignmentsNode.getElementById("assignments-list");
+        contacts.forEach((contact) => {
+          var li = document.createElement("li");
+          li.textContent =
+            `${contact.name || contact.email} → ${contact.pair.name || contact.pair.email}`;
+          listNode.appendChild(li);
+        });
 
-    return assignmentsNode;
-  }
+        return assignmentsNode;
+      }
 
-  function shuffle (array) {
-    for(let i = array.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * i);
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-    return array;
-  };
+      function shuffle (array) {
+        for(let i = array.length - 1; i > 0; i--){
+          const j = Math.floor(Math.random() * i);
+          const temp = array[i];
+          array[i] = array[j];
+          array[j] = temp;
+        }
+        return array;
+      };
 
-  function generatePairs (contacts = []) {
-    return shuffle(contacts).map((contact, i) => {
-      let pair = i + 1 == contacts.length ? contacts[0] : contacts[i + 1];
-      return { ...contact, pair };
-    })
-  }
-</script>
+      function generatePairs (contacts = []) {
+        return shuffle(contacts).map((contact, i) => {
+          let pair = i + 1 == contacts.length ? contacts[0] : contacts[i + 1];
+          return { ...contact, pair };
+        })
+      }
+    </script>
 
-<!-- Application -->
-<script>
-  let STATE = {
-    format: formatters.gmail,
-    contacts: []
-  }
+    <!-- Application -->
+    <script>
+      let STATE = {
+        format: formatters.gmail,
+        contacts: []
+      }
 
-  function updateFormatter (type = "gmail") {
-    STATE.format = formatters[type] || formatters.gmail;
-  }
+      function updateFormatter (type = "gmail") {
+        STATE.format = formatters[type] || formatters.gmail;
+      }
 
-  function updateContacts (list = "") {
-    var contacts = list.split(",").map((input = "") => {
-      var valid = VALID_EMAIL.test(input);
-      var email = valid ? input.match(VALID_EMAIL)[0] : null;
-      var name = input.replace(VALID_EMAIL, "").replace(/<.*>/g, "").trim();
-      return { valid, name: name || email, email, input };
-    });
+      function updateContacts (list = "") {
+        var contacts = list.split(",").map((input = "") => {
+          var valid = VALID_EMAIL.test(input);
+          var email = valid ? input.match(VALID_EMAIL)[0] : null;
+          var name = input.replace(VALID_EMAIL, "").replace(/<.*>/g, "").trim();
+          return { valid, name: name || email, email, input };
+        });
 
-    var pairedContacts = generatePairs(contacts);
+        var pairedContacts = generatePairs(contacts);
 
-    STATE.contacts = pairedContacts;
-  };
+        STATE.contacts = pairedContacts;
+      };
 
 
-  function renderContactList () {
-    var list = document.getElementById("list");
-    list.innerHTML = "";
+      function renderContactList () {
+        var list = document.getElementById("list");
+        list.innerHTML = "";
 
-    STATE.contacts.forEach((contact) => {
-      var { name, email, valid, pair } = contact;
-      var contactNode = createContactNode({
-        name,
-        to: email,
-        subject: "Secret Santa Assignment",
-        body: generateMessage(`${pair.name} <${pair.email}>`),
-        valid,
-        formatter: STATE.format
+        STATE.contacts.forEach((contact) => {
+          var { name, email, valid, pair } = contact;
+          var contactNode = createContactNode({
+            name,
+            to: email,
+            subject: "Secret Santa Assignment",
+            body: generateMessage(`${pair.name} <${pair.email}>`),
+            valid,
+            formatter: STATE.format
+          });
+          list.appendChild(contactNode);
+        });
+
+        var preview = document.getElementById("preview");
+        preview.innerHTML = "";
+
+        preview.appendChild(createPreviewNode(STATE.contacts));
+      }
+
+      function handleSendByChange ({ target }) {
+        updateFormatter(target.value);
+        renderContactList();
+      }
+
+      function handleListChange () {
+        var emailInput = document.getElementById("emails");
+        updateContacts(emailInput.value);
+        renderContactList();
+      }
+
+
+      document.addEventListener("DOMContentLoaded", function() {
+        var sendByForm = document.getElementById("sendBy");
+        sendByForm.addEventListener("change", handleSendByChange);
       });
-      list.appendChild(contactNode);
-    });
+    </script>
 
-    var preview = document.getElementById("preview");
-    preview.innerHTML = "";
+    <style>
+      body {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+        border: 10px dotted mediumseagreen;
+        width: 100%;
+        max-width: 500px;
+        padding: 3%;
+        margin: 0 auto;
+      }
 
-    preview.appendChild(createPreviewNode(STATE.contacts));
-  }
+      hr { border-bottom: 1px solid lightgray }
 
-  function handleSendByChange ({ target }) {
-    updateFormatter(target.value);
-    renderContactList();
-  }
+      button, label { cursor: pointer }
 
-  function handleListChange () {
-    var emailInput = document.getElementById("emails");
-    updateContacts(emailInput.value);
-    renderContactList();
-  }
+      textarea {
+        border-radius: 4px;
+        height: 10em;
+        padding: 1em;
+        width: 100%;
+        max-width: 30rem;
+      }
 
+      textarea:focus {
+        border: 1px dashed forestgreen;
+        outline: none;
+      }
 
-  document.addEventListener("DOMContentLoaded", function() {
-    var sendByForm = document.getElementById("sendBy");
-    sendByForm.addEventListener("change", handleSendByChange);
-  });
-</script>
+      ul:not(:empty) {
+        border: 1px dashed salmon;
+        padding: 1em 2em;
+        border-radius: 4px;
+        box-sizing: border-box;
+        text-align: left;
+        margin: 0 auto;
+        width: 30rem;
+      }
 
-<style>
-  body {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    text-align: center;
-  }
+      address { display: flex; justify-content: space-between; }
+      .name { font-weight: bold; font-style: normal; }
+      .list li span:last-child { align-self: flex-end;}
 
-  button, label { cursor: pointer }
+      .preview li {
+        display: flex;
+        justify-content: space-between;
+      }
 
-  textarea {
-    border-radius: 4px;
-    height: 10em;
-    padding: 1em;
-    width: 30rem;
-  }
+      .error { color: firebrick }
+    </style>
+  </head>
+  <body>
+    <h1>Simple Secret Santa</h1>
+    <p>
+      Holiday gift-giving with no tracking, not even Google Analytics.
+    </p>
+    <details>
+      <summary>How does it work?</summary>
 
-  textarea:focus {
-    border: 1px dashed forestgreen;
-    outline: none;
-  }
-
-  ul:not(:empty) {
-    border: 1px dashed salmon;
-    padding: 1em 2em;
-    border-radius: 4px;
-    box-sizing: border-box;
-    text-align: left;
-    margin: 0 auto;
-    width: 30rem;
-  }
-
-  address { display: flex; justify-content: space-between; }
-  .name { font-weight: bold; font-style: normal; }
-  .list li span:last-child { align-self: flex-end;}
-
-  .preview li {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .error { color: firebrick }
-</style>
-
-<h1>Super Simple Secret Santa</h1>
-<br>
-<br>
-
-<label for="sendBy">
-  How do you send email?
-</label>
-<br>
-<form id="sendBy">
-  <label for="gmail">
-    <input type="radio" name="sendBy" id="gmail" value="gmail" checked>
-    Gmail
-  </label>
-
-  <label for="desktop">
-    <input type="radio" name="sendBy" id="desktop" value="desktop">
-    Desktop Mail
-  </label>
-
-  <label for="yahoo">
-    <input type="radio" name="sendBy" id="yahoo" value="yahoo">
-    Yahoo
-  </label>
-
-  <label for="outlook">
-    <input type="radio" name="sendBy" id="outlook" value="outlook">
-    Outlook
-  </label>
-
-  <label for="aol">
-    <input type="radio" name="sendBy" id="aol" value="aol">
-    Aol
-  </label>
-</form>
-<br>
-<br>
-
-
-<label for="emails">
-  Who would you like to include?
-  <br>
-</label>
-<br>
-<textarea
-  id="emails"
-  placeholder="Please enter a comma-separated list, with each item formatted as: Name &lt;name@email.com&gt;"
-></textarea>
-<br>
-<button onclick="handleListChange()">Generate Assignments</button>
-<br>
-<br>
-<br>
-
-<ul id="list"></ul>
-<br>
-<br>
-<div id="preview"></div>
-
-<!-- Contact List Template -->
-<template id="contact-template">
-  <li>
-    <address>
-      <span>
-        <span class="name"></span>,
-        <span class="email"></span>
-      </span>
-      <a class="send" target="_blank">Send</a>
-      <span class="error"></span>
-    </address>
-  </li>
-</template>
-
-<!-- Assignments Preview Template -->
-<template id="preview-template">
-  <details>
-    <summary>
-      Assignments [Spoiler Alert]
-    </summary>
+    </details>
     <br>
-    <ul id="assignments-list">
-    </ul>
-  </details>
-</template>
+    <br>
 
-<!-- Assignment Template -->
-<template id="preview-template">
-  <li>
-  </li>
-</template>
+    <label for="sendBy">
+      <strong>1. How do you send email?</strong>
+    </label>
+    <br>
+    <form id="sendBy">
+      <label for="desktop">
+        <input type="radio" name="sendBy" id="desktop" value="desktop">
+        Desktop Mail
+      </label>
+
+      <label for="gmail">
+        <input type="radio" name="sendBy" id="gmail" value="gmail" checked>
+        Gmail
+      </label>
+
+      <label for="yahoo">
+        <input type="radio" name="sendBy" id="yahoo" value="yahoo">
+        Yahoo
+      </label>
+
+      <label for="outlook">
+        <input type="radio" name="sendBy" id="outlook" value="outlook">
+        Outlook
+      </label>
+
+      <label for="aol">
+        <input type="radio" name="sendBy" id="aol" value="aol">
+        Aol
+      </label>
+    </form>
+    <br>
+    <br>
+
+    <label for="emails">
+      <strong>2. Who would you like to include?</strong>
+      <br>
+    </label>
+    <br>
+
+    <textarea
+      id="emails"
+      placeholder="Please enter a comma-separated list, with each item formatted as: Name &lt;name@email.com&gt;"
+    ></textarea>
+    <br>
+    <button onclick="handleListChange()">Generate Assignments</button>
+    <br>
+    <br>
+    <br>
+
+    <ul id="list"></ul>
+    <br>
+    <br>
+    <div id="preview"></div>
+
+    <!-- Contact List Template -->
+    <template id="contact-template">
+      <li>
+        <address>
+          <span>
+            <span class="name"></span>,
+            <span class="email"></span>
+          </span>
+          <a class="send" target="_blank">Send</a>
+          <span class="error"></span>
+        </address>
+      </li>
+    </template>
+
+    <!-- Assignments Preview Template -->
+    <template id="preview-template">
+      <details>
+        <summary>
+          Preview Assignments [Contains Spoilers]
+        </summary>
+        <br>
+        <ul id="assignments-list">
+        </ul>
+      </details>
+    </template>
+
+    <!-- Assignment Template -->
+    <template id="preview-template">
+      <li>
+      </li>
+    </template>
+  </body>
+</html>
+
+
+
 
 
 
